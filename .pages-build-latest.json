@@ -1,7 +1,7 @@
 {
   "stage": "build",
-  "result": "failure",
-  "run_id": "29107766779",
-  "commit_sha": "f5e7271dbed5161670dd91313596cd13be2b83f9",
-  "error": "LZMAError: Corrupt input data"
+  "result": "success",
+  "run_id": "29107876957",
+  "commit_sha": "04ca79bb94969c30c80ff3078eaab6e2899a6f21",
+  "error": ""
 }
