@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: kivits-goes-pro
+    runtime: docker
+    branch: BlackBooxV4
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    plan: free
