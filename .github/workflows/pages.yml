@@ -1,8 +1,8 @@
-name: Deploy KivitsGoesPro to GitHub Pages
+name: Deploy KivitsGoesPro Business Control
 
 on:
   push:
-    branches: [BlackBooxV4]
+    branches: [BlackBooxV4, business-control-1.4]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -21,61 +21,69 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Rebuild static site safely
+      - name: Rebuild base application
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import base64, io, tarfile, traceback
+          import base64, io, tarfile
 
-          try:
-              parts = [Path(f"bundle.part{i:02d}") for i in range(12)]
-              missing = [str(p) for p in parts if not p.is_file()]
-              if missing:
-                  raise RuntimeError(f"Missing bundle parts: {missing}")
+          parts = [Path(f"bundle.part{i:02d}") for i in range(12)]
+          missing = [str(p) for p in parts if not p.is_file()]
+          if missing:
+              raise SystemExit(f"Missing base bundle parts: {missing}")
 
-              encoded = "".join(p.read_text(encoding="utf-8") for p in parts)
-              encoded = "".join(encoded.split())
-              archive = base64.b64decode(encoded, validate=True)
-
-              target = Path("_site")
-              target.mkdir(parents=True, exist_ok=True)
-              with tarfile.open(fileobj=io.BytesIO(archive), mode="r:xz") as tar:
-                  target_root = target.resolve()
-                  for member in tar.getmembers():
-                      resolved = (target / member.name).resolve()
-                      if target_root not in resolved.parents and resolved != target_root:
-                          raise RuntimeError(f"Unsafe archive path: {member.name}")
-                  tar.extractall(target)
-
-              required = [
-                  "index.html", "app.js", "auth.js", "styles.css",
-                  "manifest.json", "service-worker.js",
-                  "assets/kivits-goes-logo.jpg", "assets/default-avatar.svg",
-              ]
-              missing_files = [name for name in required if not (target / name).is_file()]
-              if missing_files:
-                  raise RuntimeError(f"Missing rebuilt files: {missing_files}")
-              (target / ".nojekyll").touch()
-              print(f"Rebuilt {len(required)} required files successfully")
-          except Exception as exc:
-              message = f"{type(exc).__name__}: {exc}"
-              Path("/tmp/pages-build-error.txt").write_text(message, encoding="utf-8")
-              traceback.print_exc()
-              raise
+          encoded = "".join(p.read_text(encoding="utf-8") for p in parts)
+          archive = base64.b64decode("".join(encoded.split()), validate=True)
+          target = Path("_site")
+          target.mkdir(parents=True, exist_ok=True)
+          with tarfile.open(fileobj=io.BytesIO(archive), mode="r:xz") as tar:
+              root = target.resolve()
+              for member in tar.getmembers():
+                  resolved = (target / member.name).resolve()
+                  if root not in resolved.parents and resolved != root:
+                      raise SystemExit(f"Unsafe archive path: {member.name}")
+              tar.extractall(target)
           PY
 
-      - name: Validate JavaScript and manifest
+      - name: Apply Business Control 1.4 patch
+        shell: bash
         run: |
+          set -euo pipefail
+          for file in business14.js.gz.b64x.part00 business14.js.gz.b64x.part01 business14.js.gz.b64x.part02; do
+            base64 --decode "$file"
+          done > /tmp/business14.js.gz.b64
+          base64 --decode /tmp/business14.js.gz.b64 | gzip -dc > /tmp/business14.js
+
+          base64 --decode business14.css.gz.b64x.part00 > /tmp/business14.css.gz.b64
+          base64 --decode /tmp/business14.css.gz.b64 | gzip -dc > _site/business14.css
+
+          printf '\n' >> _site/app.js
+          cat /tmp/business14.js >> _site/app.js
+          touch _site/.nojekyll
+
+      - name: Validate release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f _site/index.html
+          test -f _site/app.js
+          test -f _site/auth.js
+          test -f _site/styles.css
+          test -f _site/business14.css
+          test -f _site/manifest.json
+          test -f _site/assets/kivits-goes-logo.jpg
           node --check _site/app.js
           node --check _site/auth.js
           python3 -m json.tool _site/manifest.json >/dev/null
+          grep -q "BUSINESS CONTROL 1.4" _site/app.js
+          grep -q "Business Control Center" _site/app.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
@@ -94,22 +102,20 @@ jobs:
           set -euo pipefail
           python3 - <<'PY' > /tmp/build-marker.b64
           import base64, json, os
-          from pathlib import Path
-          error_file = Path('/tmp/pages-build-error.txt')
           payload = {
               "stage": "build",
+              "release": "Business Control 1.4",
               "result": os.environ["RESULT"],
               "run_id": os.environ["RUN_ID"],
               "commit_sha": os.environ["COMMIT_SHA"],
-              "error": error_file.read_text(encoding='utf-8') if error_file.exists() else "",
           }
           print(base64.b64encode((json.dumps(payload, indent=2) + "\n").encode()).decode())
           PY
-          EXISTING_SHA="$(gh api "repos/$REPO/contents/.pages-build-latest.json?ref=$BRANCH" --jq .sha 2>/dev/null || true)"
-          if [ -n "$EXISTING_SHA" ]; then
-            gh api --method PUT "repos/$REPO/contents/.pages-build-latest.json" -f message='Record Pages build result [skip ci]' -f content="$(cat /tmp/build-marker.b64)" -f branch="$BRANCH" -f sha="$EXISTING_SHA"
+          SHA="$(gh api "repos/$REPO/contents/.pages-build-latest.json?ref=$BRANCH" --jq .sha 2>/dev/null || true)"
+          if [ -n "$SHA" ]; then
+            gh api --method PUT "repos/$REPO/contents/.pages-build-latest.json" -f message='Record Business 1.4 build [skip ci]' -f content="$(cat /tmp/build-marker.b64)" -f branch="$BRANCH" -f sha="$SHA"
           else
-            gh api --method PUT "repos/$REPO/contents/.pages-build-latest.json" -f message='Record Pages build result [skip ci]' -f content="$(cat /tmp/build-marker.b64)" -f branch="$BRANCH"
+            gh api --method PUT "repos/$REPO/contents/.pages-build-latest.json" -f message='Record Business 1.4 build [skip ci]' -f content="$(cat /tmp/build-marker.b64)" -f branch="$BRANCH"
           fi
 
   deploy:
@@ -140,6 +146,7 @@ jobs:
           import base64, json, os
           payload = {
               "stage": "deploy",
+              "release": "Business Control 1.4",
               "result": os.environ["RESULT"],
               "run_id": os.environ["RUN_ID"],
               "page_url": os.environ.get("PAGE_URL", ""),
@@ -147,9 +154,9 @@ jobs:
           }
           print(base64.b64encode((json.dumps(payload, indent=2) + "\n").encode()).decode())
           PY
-          EXISTING_SHA="$(gh api "repos/$REPO/contents/.pages-deploy-latest.json?ref=$BRANCH" --jq .sha 2>/dev/null || true)"
-          if [ -n "$EXISTING_SHA" ]; then
-            gh api --method PUT "repos/$REPO/contents/.pages-deploy-latest.json" -f message='Record Pages deploy result [skip ci]' -f content="$(cat /tmp/deploy-marker.b64)" -f branch="$BRANCH" -f sha="$EXISTING_SHA"
+          SHA="$(gh api "repos/$REPO/contents/.pages-deploy-latest.json?ref=$BRANCH" --jq .sha 2>/dev/null || true)"
+          if [ -n "$SHA" ]; then
+            gh api --method PUT "repos/$REPO/contents/.pages-deploy-latest.json" -f message='Record Business 1.4 deploy [skip ci]' -f content="$(cat /tmp/deploy-marker.b64)" -f branch="$BRANCH" -f sha="$SHA"
           else
-            gh api --method PUT "repos/$REPO/contents/.pages-deploy-latest.json" -f message='Record Pages deploy result [skip ci]' -f content="$(cat /tmp/deploy-marker.b64)" -f branch="$BRANCH"
+            gh api --method PUT "repos/$REPO/contents/.pages-deploy-latest.json" -f message='Record Business 1.4 deploy [skip ci]' -f content="$(cat /tmp/deploy-marker.b64)" -f branch="$BRANCH"
           fi
