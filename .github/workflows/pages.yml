@@ -22,12 +22,19 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Rebuild static site
+        shell: bash
         run: |
+          set -euxo pipefail
           mkdir -p _site
-          cat bundle.part* | tr -d '\n\r ' | base64 -d > /tmp/kivits.tar.xz
+          ls -lh bundle.part{00..11}
+          cat bundle.part{00..11} | tr -d '\n\r\t ' | base64 --decode > /tmp/kivits.tar.xz
+          xz --test /tmp/kivits.tar.xz
           tar -xJf /tmp/kivits.tar.xz -C _site
           touch _site/.nojekyll
           test -f _site/index.html
+          test -f _site/app.js
+          test -f _site/auth.js
+          test -f _site/styles.css
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
