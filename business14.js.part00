@@ -1,0 +1,78 @@
+/* ========================= BUSINESS CONTROL 1.4 ========================= */
+function installBusinessUi(){
+ if(document.getElementById("businessView"))return;
+ document.title="Kivit's Goes Workforce Control — Business 1.4";
+ const ribbon=document.querySelector(".demo-ribbon");if(ribbon)ribbon.textContent="BUSINESS CONTROL 1.4 · compliance engine · payroll readiness · workforce risk";
+ if(!document.getElementById("business14Styles")){const link=document.createElement("link");link.id="business14Styles";link.rel="stylesheet";link.href="business14.css";document.head.appendChild(link)}
+ const dashboardNav=document.querySelector('[data-view="dashboard"]');
+ const nav=document.createElement("button");nav.className="nav-item";nav.dataset.view="business";nav.dataset.access="business";nav.innerHTML='<span class="nav-icon">◫</span><span>Business Control</span>';nav.addEventListener("click",()=>switchView("business"));dashboardNav?.insertAdjacentElement("afterend",nav);
+ const planning=document.getElementById("planningView");planning?.insertAdjacentHTML("beforebegin",`
+
+
+      <section class="view" id="businessView">
+        <div class="page-title-row business-title-row">
+          <div><p class="eyebrow">Workforce Intelligence</p><h1>Business Control Center</h1><span>Control automat pentru planning, contracte, pauze, pontaj, aprobări și pregătirea payroll.</span></div>
+          <div class="toolbar-buttons"><button class="outline-button" id="businessRefresh">↻ Reanalizează</button><button class="outline-button export-primary" id="businessExport">⇩ Export raport</button><button class="solid-button" id="businessOpenPlanning">Deschide planning</button></div>
+        </div>
+        <section class="business-release-card">
+          <div><span class="release-badge">NOU 1.4</span><h2>Motor operațional și control preventiv</h2><p>Detectează conflicte înainte de publicare, calculează riscul de overtime, verifică pauzele și repausul, urmărește SLA-ul cererilor și măsoară readiness pentru payroll.</p></div>
+          <div class="release-points"><span>✓ 11 reguli automate</span><span>✓ scoring explicabil</span><span>✓ corecții controlate</span></div>
+        </section>
+        <section class="white-panel business-filter-panel">
+          <div class="business-filters">
+            <label><span>Săptămâna</span><input id="businessWeek" type="date"></label>
+            <label><span>Agency</span><select id="businessAgency"></select></label>
+            <label><span>Departament</span><select id="businessDepartment"></select></label>
+            <label><span>Severitate</span><select id="businessSeverity"><option value="all">Toate</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="info">Info</option></select></label>
+          </div>
+        </section>
+        <div class="business-kpi-grid" id="businessKpis"></div>
+        <div class="business-main-grid">
+          <section class="white-panel business-alert-panel">
+            <div class="admin-panel-head"><div><p class="eyebrow">Risk & Exceptions</p><h2>Excepții care necesită acțiune</h2><p id="businessAlertSummary">—</p></div><div class="inline-actions"><button class="outline-button" id="businessFixBreaks" data-action-access="planning">Repară pauzele</button><button class="outline-button" id="businessPublishSafe" data-action-access="planning">Publică ture sigure</button></div></div>
+            <div class="table-scroll"><table class="data-table business-alert-table"><thead><tr><th>Risc</th><th>Tip</th><th>Angajat</th><th>Dată</th><th>Constatare</th><th>Acțiune recomandată</th><th></th></tr></thead><tbody id="businessAlertTable"></tbody></table></div>
+          </section>
+          <aside class="business-side-stack">
+            <section class="white-panel"><div class="admin-panel-head"><div><p class="eyebrow">Payroll</p><h2>Readiness</h2></div></div><div id="payrollReadiness"></div></section>
+            <section class="white-panel"><div class="admin-panel-head"><div><p class="eyebrow">Workload</p><h2>Contract vs planning</h2></div></div><div id="contractLoad"></div></section>
+          </aside>
+        </div>
+        <section class="white-panel business-coverage-panel">
+          <div class="admin-panel-head"><div><p class="eyebrow">Coverage</p><h2>Acoperire pe departamente</h2><p>Numărul de persoane planificate comparat cu ținta minimă configurată.</p></div></div>
+          <div class="table-scroll" id="businessCoverage"></div>
+        </section>
+        <section class="white-panel business-rules-panel" id="businessRulesPanel">
+          <div class="admin-panel-head"><div><p class="eyebrow">Policy Engine</p><h2>Reguli de business</h2><p>Aceste praguri sunt reguli interne configurabile, nu verdicte juridice automate.</p></div><button class="solid-button" id="businessSaveRules">Salvează reguli</button></div>
+          <div class="business-rule-grid">
+            <label><span>Durată maximă tură (ore)</span><input id="ruleMaxShift" type="number" min="1" max="24" step="0.5"></label>
+            <label><span>Repaus minim între ture (ore)</span><input id="ruleMinRest" type="number" min="0" max="24" step="0.5"></label>
+            <label><span>Toleranță overtime / săptămână</span><input id="ruleOvertimeTolerance" type="number" min="0" max="40" step="0.5"></label>
+            <label><span>SLA cereri (ore)</span><input id="ruleRequestSla" type="number" min="1" max="720"></label>
+            <label><span>Orizont publicare draft (zile)</span><input id="ruleDraftHorizon" type="number" min="0" max="90"></label>
+            <label><span>Sesiune pontaj maximă (ore)</span><input id="ruleOpenClock" type="number" min="1" max="48"></label>
+            <label><span>Pauză minimă de la 4h (minute)</span><input id="ruleBreak4" type="number" min="0" max="180" step="5"></label>
+            <label><span>Pauză minimă de la 8h (minute)</span><input id="ruleBreak8" type="number" min="0" max="240" step="5"></label>
+          </div>
+          <div class="coverage-target-editor" id="coverageTargetEditor"></div>
+        </section>
+      </section>
+`);
+}
+
+const BUSINESS_VERSION="1.4";
+let businessSeverityFilter="all";
+
+function ensureBusinessState(){
+ const defaults={maxShiftHours:12,minimumRestHours:11,overtimeToleranceHours:2,requestSlaHours:48,draftHorizonDays:7,openClockMaxHours:16,breakAt4Hours:30,breakAt8Hours:60,defaultHourlyCost:17,coverageTargets:{},requiredSkillsByPosition:{pos_reach:["reachtruck"],pos_quality:["haccp"]}};
+ state.businessRules={...defaults,...(state.businessRules||{}),coverageTargets:{...defaults.coverageTargets,...(state.businessRules?.coverageTargets||{})},requiredSkillsByPosition:{...defaults.requiredSkillsByPosition,...(state.businessRules?.requiredSkillsByPosition||{})}};
+ state.departments.forEach(dep=>{if(state.businessRules.coverageTargets[dep.id]===undefined)state.businessRules.coverageTargets[dep.id]=["dep_packing","dep_warehouse"].includes(dep.id)?2:1});
+ state.releaseVersion=BUSINESS_VERSION
+}
+function canUseBusiness(){return["admin","planner","manager","team_leader"].includes(profile()?.role)}
+function businessWeekStart(){const value=document.getElementById("businessWeek")?.value;return mondayOf(value||currentMonday||todayAmsterdam())}
+function businessWeekDates(){const start=businessWeekStart();return Array.from({length:7},(_,i)=>plusDays(start,i))}
+function businessAgencyId(){const select=document.getElementById("businessAgency");if(isDepartmentReviewer())return profile().agencyId;return select?.value||activeAgencyId()||"all"}
+function businessDepartmentId(){const select=document.getElementById("businessDepartment");if(isDepartmentReviewer())return profile().departmentId;return select?.value||""}
+function businessEmployees(){const agencyId=businessAgencyId(),departmentId=businessDepartmentId();return state.employees.filter(e=>e.status==="active").filter(e=>agencyId==="all"||e.agencyId===agencyId).filter(e=>!departmentId||e.departmentId===departmentId).filter(employeeInsideManagerScope)}
+function businessShifts({weekOnly=true}={}){const employeeIds=new Set(businessEmployees().map(e=>e.id)),dates=new Set(businessWeekDates());return state.shifts.filter(s=>employeeIds.has(s.employeeId)&&s.status!=="cancelled").filter(s=>!weekOnly||dates.has(s.date))}
+function shiftInterval(shift){const start=new Date(`${shift.date}T${shift.start||"00:00"}:00`),end=new Date(`${shift.date}T${shift.end||"00:00"}:00`);if(end<=start)end.setDate(end.getDate()+1);return{start,end}
