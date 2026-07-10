@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -84,3 +84,38 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Record successful deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/pages-marker.b64
+          import base64, json, os
+          payload = {
+              "status": "deployed",
+              "run_id": os.environ["RUN_ID"],
+              "page_url": os.environ["PAGE_URL"],
+              "commit_sha": os.environ["COMMIT_SHA"],
+          }
+          print(base64.b64encode((json.dumps(payload, indent=2) + "\n").encode()).decode())
+          PY
+          EXISTING_SHA="$(gh api "repos/$REPO/contents/.pages-deployed-latest.json?ref=$BRANCH" --jq .sha 2>/dev/null || true)"
+          if [ -n "$EXISTING_SHA" ]; then
+            gh api --method PUT "repos/$REPO/contents/.pages-deployed-latest.json" \
+              -f message='Record successful Pages deployment [skip ci]' \
+              -f content="$(cat /tmp/pages-marker.b64)" \
+              -f branch="$BRANCH" \
+              -f sha="$EXISTING_SHA"
+          else
+            gh api --method PUT "repos/$REPO/contents/.pages-deployed-latest.json" \
+              -f message='Record successful Pages deployment [skip ci]' \
+              -f content="$(cat /tmp/pages-marker.b64)" \
+              -f branch="$BRANCH"
+          fi
