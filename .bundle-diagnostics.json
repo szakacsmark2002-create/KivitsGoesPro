@@ -1,0 +1,77 @@
+{
+  "run_id": "29107766827",
+  "parts": [
+    {
+      "name": "bundle.part00",
+      "exists": true,
+      "size": 10000,
+      "sha256": "257a790f9e27535f114be3ecfa0b4118bdf30dd38baa8e2743f0387c037d36bf"
+    },
+    {
+      "name": "bundle.part01",
+      "exists": true,
+      "size": 10000,
+      "sha256": "7685eb8b680af3d6dfc9c80446a325147bf904414f24b9d011d3aac0eecb7849"
+    },
+    {
+      "name": "bundle.part02",
+      "exists": true,
+      "size": 10000,
+      "sha256": "7ff8ad247ee56674f675b96409394aebfced81617cf7510f80a4169dc336239f"
+    },
+    {
+      "name": "bundle.part03",
+      "exists": true,
+      "size": 10000,
+      "sha256": "d66f83985a37931d8ed400ea0e6093f45494cfd3c3d116fb089f07c89b0dabf9"
+    },
+    {
+      "name": "bundle.part04",
+      "exists": true,
+      "size": 10000,
+      "sha256": "ed6e5a726b4d54f659088e0c6e93586c3e3022e0e844b3ff1ea3ee220ffc49fe"
+    },
+    {
+      "name": "bundle.part05",
+      "exists": true,
+      "size": 10000,
+      "sha256": "41ddf97fe44cdc6b2cab4cbf0bd20965435db134d0009297a9e46bb427637782"
+    },
+    {
+      "name": "bundle.part06",
+      "exists": true,
+      "size": 10000,
+      "sha256": "8dd2830b7506ce4cccd36a3f5279fb9c0fc8a931404bd93e36a75b10f1ff3e2b"
+    },
+    {
+      "name": "bundle.part07",
+      "exists": true,
+      "size": 10000,
+      "sha256": "7604e9ddef617a44e01ce6fe62865b738428a5dfe2283383e90ff7ce7edc9157"
+    },
+    {
+      "name": "bundle.part08",
+      "exists": true,
+      "size": 10000,
+      "sha256": "97264c269852e6dd13e32581e2d3f198cd096ceda8735dbc7b273de2c7879446"
+    },
+    {
+      "name": "bundle.part09",
+      "exists": true,
+      "size": 10000,
+      "sha256": "168cc8b382886fed26ca17c07adde8c8b0b5d7f300d96ec4220413b105eef462"
+    },
+    {
+      "name": "bundle.part10",
+      "exists": true,
+      "size": 10000,
+      "sha256": "06449f230f931898cc56c52b74460e3cbb6d3daebcde14a2aef1ab5cc561759e"
+    },
+    {
+      "name": "bundle.part11",
+      "exists": true,
+      "size": 3208,
+      "sha256": "e379d28b9af13c3193d5fad3cea483803aa414efb9f696bda677e397786ff9d5"
+    }
+  ]
+}
