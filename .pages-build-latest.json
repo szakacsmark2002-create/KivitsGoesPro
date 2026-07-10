@@ -2,6 +2,25 @@
   "stage": "build",
   "release": "Business Control 1.4",
   "result": "failure",
-  "run_id": "29109608066",
-  "commit_sha": "a33f6e06132ad9fef3dac09de5a3488d62999233"
+  "run_id": "29109976317",
+  "commit_sha": "fdbd65e888d4a7996fe92cf9cc852d32c065f422",
+  "error": "Error: Only base64 data is allowed\nTraceback (most recent call last):\n  File \"<stdin>\", line 23, in <module>\n  File \"<stdin>\", line 18, in decode_patch\n  File \"/usr/lib/python3.12/base64.py\", line 88, in b64decode\n    return binascii.a2b_base64(s, strict_mode=validate)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nbinascii.Error: Only base64 data is allowed\n",
+  "diagnostics": {
+    "business14.js.gz.b64x.part00": {
+      "size": 8000,
+      "sha256": "06b606bb5d1a8daa3b2caab2fa598d7b95161a3a500f68bf38d930e41f4f2d8d"
+    },
+    "business14.js.gz.b64x.part01": {
+      "size": 8000,
+      "sha256": "2b7da362ff1f3ff2db9d5fecbfd49f48bd85f44c1a28172ecf24eef3b124a269"
+    },
+    "business14.js.gz.b64x.part02": {
+      "size": 1400,
+      "sha256": "9971c6bb19c0407c2e164ed7e83f8521bae1b2e017ed08c4ebb43f9a2ba092b5"
+    },
+    "business14.css.gz.b64x.part00": {
+      "size": 3164,
+      "sha256": "f288b885d907bf78a9a84b3f2abbdce179944c2baadd011fc7b117ec4cdbb5c0"
+    }
+  }
 }
