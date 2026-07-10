@@ -13,8 +13,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Rebuild application files
+        shell: bash
         run: |
-          cat bundle.part* | tr -d '\n\r ' | base64 -d > /tmp/kivits.tar.xz
+          set -euxo pipefail
+          ls -lh bundle.part{00..11}
+          cat bundle.part{00..11} | tr -d '\n\r\t ' | base64 --decode > /tmp/kivits.tar.xz
+          xz --test /tmp/kivits.tar.xz
           mkdir -p /tmp/kivits-app
           tar -xJf /tmp/kivits.tar.xz -C /tmp/kivits-app
 
