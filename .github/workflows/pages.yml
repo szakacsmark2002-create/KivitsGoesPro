@@ -1,0 +1,49 @@
+name: Deploy KivitsGoesPro to GitHub Pages
+
+on:
+  push:
+    branches: [BlackBooxV4]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Rebuild static site
+        run: |
+          mkdir -p _site
+          cat bundle.part* | tr -d '\n\r ' | base64 -d > /tmp/kivits.tar.xz
+          tar -xJf /tmp/kivits.tar.xz -C _site
+          touch _site/.nojekyll
+          test -f _site/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
