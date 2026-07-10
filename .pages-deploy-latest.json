@@ -1,7 +1,8 @@
 {
   "stage": "deploy",
+  "release": "Business Control 1.4",
   "result": "success",
-  "run_id": "29107876957",
+  "run_id": "29110083526",
   "page_url": "https://szakacsmark2002-create.github.io/KivitsGoesPro/",
-  "commit_sha": "04ca79bb94969c30c80ff3078eaab6e2899a6f21"
+  "commit_sha": "625bbb5355813816264ddcd36bd9a22d41ea6fbb"
 }
