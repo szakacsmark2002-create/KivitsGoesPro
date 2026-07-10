@@ -1,7 +1,7 @@
 {
   "stage": "build",
-  "result": "success",
-  "run_id": "29107876957",
-  "commit_sha": "04ca79bb94969c30c80ff3078eaab6e2899a6f21",
-  "error": ""
+  "release": "Business Control 1.4",
+  "result": "failure",
+  "run_id": "29109486209",
+  "commit_sha": "a33f6e06132ad9fef3dac09de5a3488d62999233"
 }
