@@ -1,0 +1,34 @@
+name: Validate application bundle
+
+on:
+  push:
+    branches: [BlackBooxV4]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rebuild application files
+        run: |
+          cat bundle.part* | tr -d '\n\r ' | base64 -d > /tmp/kivits.tar.xz
+          mkdir -p /tmp/kivits-app
+          tar -xJf /tmp/kivits.tar.xz -C /tmp/kivits-app
+
+      - name: Validate required files
+        run: |
+          test -f /tmp/kivits-app/index.html
+          test -f /tmp/kivits-app/app.js
+          test -f /tmp/kivits-app/auth.js
+          test -f /tmp/kivits-app/styles.css
+          test -f /tmp/kivits-app/manifest.json
+          test -f /tmp/kivits-app/assets/kivits-goes-logo.jpg
+
+      - name: Validate JavaScript and manifest
+        run: |
+          node --check /tmp/kivits-app/app.js
+          node --check /tmp/kivits-app/auth.js
+          python -m json.tool /tmp/kivits-app/manifest.json >/dev/null
