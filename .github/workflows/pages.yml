@@ -21,20 +21,50 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Rebuild static site
+      - name: Rebuild static site safely
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p _site
-          ls -lh bundle.part{00..11}
-          cat bundle.part{00..11} | tr -d '\n\r\t ' | base64 --decode > /tmp/kivits.tar.xz
-          xz --test /tmp/kivits.tar.xz
-          tar -xJf /tmp/kivits.tar.xz -C _site
-          touch _site/.nojekyll
-          test -f _site/index.html
-          test -f _site/app.js
-          test -f _site/auth.js
-          test -f _site/styles.css
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, io, tarfile
+
+          parts = [Path(f"bundle.part{i:02d}") for i in range(12)]
+          missing = [str(p) for p in parts if not p.is_file()]
+          if missing:
+              raise SystemExit(f"Missing bundle parts: {missing}")
+
+          encoded = "".join(p.read_text(encoding="utf-8") for p in parts)
+          encoded = "".join(encoded.split())
+          archive = base64.b64decode(encoded, validate=True)
+
+          target = Path("_site")
+          target.mkdir(parents=True, exist_ok=True)
+          with tarfile.open(fileobj=io.BytesIO(archive), mode="r:xz") as tar:
+              target_root = target.resolve()
+              for member in tar.getmembers():
+                  resolved = (target / member.name).resolve()
+                  if target_root not in resolved.parents and resolved != target_root:
+                      raise SystemExit(f"Unsafe archive path: {member.name}")
+              tar.extractall(target)
+
+          required = [
+              "index.html", "app.js", "auth.js", "styles.css",
+              "manifest.json", "service-worker.js",
+              "assets/kivits-goes-logo.jpg", "assets/default-avatar.svg",
+          ]
+          missing_files = [name for name in required if not (target / name).is_file()]
+          if missing_files:
+              raise SystemExit(f"Missing rebuilt files: {missing_files}")
+          (target / ".nojekyll").touch()
+          print(f"Rebuilt {len(required)} required files successfully")
+          PY
+
+      - name: Validate JavaScript and manifest
+        run: |
+          node --check _site/app.js
+          node --check _site/auth.js
+          python3 -m json.tool _site/manifest.json >/dev/null
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
