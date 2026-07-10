@@ -24,40 +24,46 @@ jobs:
       - name: Rebuild static site safely
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import base64, io, tarfile
+          import base64, io, tarfile, traceback
 
-          parts = [Path(f"bundle.part{i:02d}") for i in range(12)]
-          missing = [str(p) for p in parts if not p.is_file()]
-          if missing:
-              raise SystemExit(f"Missing bundle parts: {missing}")
+          try:
+              parts = [Path(f"bundle.part{i:02d}") for i in range(12)]
+              missing = [str(p) for p in parts if not p.is_file()]
+              if missing:
+                  raise RuntimeError(f"Missing bundle parts: {missing}")
 
-          encoded = "".join(p.read_text(encoding="utf-8") for p in parts)
-          encoded = "".join(encoded.split())
-          archive = base64.b64decode(encoded, validate=True)
+              encoded = "".join(p.read_text(encoding="utf-8") for p in parts)
+              encoded = "".join(encoded.split())
+              archive = base64.b64decode(encoded, validate=True)
 
-          target = Path("_site")
-          target.mkdir(parents=True, exist_ok=True)
-          with tarfile.open(fileobj=io.BytesIO(archive), mode="r:xz") as tar:
-              target_root = target.resolve()
-              for member in tar.getmembers():
-                  resolved = (target / member.name).resolve()
-                  if target_root not in resolved.parents and resolved != target_root:
-                      raise SystemExit(f"Unsafe archive path: {member.name}")
-              tar.extractall(target)
+              target = Path("_site")
+              target.mkdir(parents=True, exist_ok=True)
+              with tarfile.open(fileobj=io.BytesIO(archive), mode="r:xz") as tar:
+                  target_root = target.resolve()
+                  for member in tar.getmembers():
+                      resolved = (target / member.name).resolve()
+                      if target_root not in resolved.parents and resolved != target_root:
+                          raise RuntimeError(f"Unsafe archive path: {member.name}")
+                  tar.extractall(target)
 
-          required = [
-              "index.html", "app.js", "auth.js", "styles.css",
-              "manifest.json", "service-worker.js",
-              "assets/kivits-goes-logo.jpg", "assets/default-avatar.svg",
-          ]
-          missing_files = [name for name in required if not (target / name).is_file()]
-          if missing_files:
-              raise SystemExit(f"Missing rebuilt files: {missing_files}")
-          (target / ".nojekyll").touch()
-          print(f"Rebuilt {len(required)} required files successfully")
+              required = [
+                  "index.html", "app.js", "auth.js", "styles.css",
+                  "manifest.json", "service-worker.js",
+                  "assets/kivits-goes-logo.jpg", "assets/default-avatar.svg",
+              ]
+              missing_files = [name for name in required if not (target / name).is_file()]
+              if missing_files:
+                  raise RuntimeError(f"Missing rebuilt files: {missing_files}")
+              (target / ".nojekyll").touch()
+              print(f"Rebuilt {len(required)} required files successfully")
+          except Exception as exc:
+              message = f"{type(exc).__name__}: {exc}"
+              Path("/tmp/pages-build-error.txt").write_text(message, encoding="utf-8")
+              traceback.print_exc()
+              raise
           PY
 
       - name: Validate JavaScript and manifest
@@ -88,11 +94,14 @@ jobs:
           set -euo pipefail
           python3 - <<'PY' > /tmp/build-marker.b64
           import base64, json, os
+          from pathlib import Path
+          error_file = Path('/tmp/pages-build-error.txt')
           payload = {
               "stage": "build",
               "result": os.environ["RESULT"],
               "run_id": os.environ["RUN_ID"],
               "commit_sha": os.environ["COMMIT_SHA"],
+              "error": error_file.read_text(encoding='utf-8') if error_file.exists() else "",
           }
           print(base64.b64encode((json.dumps(payload, indent=2) + "\n").encode()).decode())
           PY
