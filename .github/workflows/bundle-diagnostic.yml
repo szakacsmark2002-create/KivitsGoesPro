@@ -1,0 +1,43 @@
+name: Diagnose bundle parts
+
+on:
+  push:
+    branches: [BlackBooxV4]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Compute part diagnostics
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY' > /tmp/diag.b64
+          from pathlib import Path
+          import base64, hashlib, json, os
+          rows=[]
+          for i in range(12):
+              p=Path(f'bundle.part{i:02d}')
+              rows.append({
+                  'name':p.name,
+                  'exists':p.exists(),
+                  'size':p.stat().st_size if p.exists() else None,
+                  'sha256':hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None,
+              })
+          payload={'run_id':os.environ['RUN_ID'],'parts':rows}
+          print(base64.b64encode((json.dumps(payload,indent=2)+'\n').encode()).decode())
+          PY
+          EXISTING_SHA="$(gh api "repos/$REPO/contents/.bundle-diagnostics.json?ref=$BRANCH" --jq .sha 2>/dev/null || true)"
+          if [ -n "$EXISTING_SHA" ]; then
+            gh api --method PUT "repos/$REPO/contents/.bundle-diagnostics.json" -f message='Record bundle diagnostics [skip ci]' -f content="$(cat /tmp/diag.b64)" -f branch="$BRANCH" -f sha="$EXISTING_SHA"
+          else
+            gh api --method PUT "repos/$REPO/contents/.bundle-diagnostics.json" -f message='Record bundle diagnostics [skip ci]' -f content="$(cat /tmp/diag.b64)" -f branch="$BRANCH"
+          fi
