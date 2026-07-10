@@ -51,40 +51,28 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import base64, gzip, hashlib, json, traceback
-
-          js_parts = [Path(f"business14.js.gz.b64x.part{i:02d}") for i in range(3)]
-          css_parts = [Path("business14.css.gz.b64x.part00")]
-          all_parts = js_parts + css_parts
-          diagnostics = {}
-          for path in all_parts:
-              data = path.read_bytes()
-              diagnostics[path.name] = {
-                  "size": len(data),
-                  "sha256": hashlib.sha256(data).hexdigest(),
-              }
-          Path("/tmp/business14-diagnostics.json").write_text(json.dumps(diagnostics, indent=2), encoding="utf-8")
+          import base64, gzip
 
           def decode_patch(parts):
-              inner_b64 = b"".join(base64.b64decode(path.read_bytes(), validate=True) for path in parts)
-              compressed = base64.b64decode(b"".join(inner_b64.split()), validate=True)
+              inner = b"".join(base64.b64decode(Path(path).read_bytes(), validate=True) for path in parts)
+              compressed = base64.b64decode(b"".join(inner.split()), validate=True)
               return gzip.decompress(compressed)
 
-          try:
-              js = decode_patch(js_parts)
-              css = decode_patch(css_parts)
-              Path("/tmp/business14.js").write_bytes(js)
-              Path("_site/business14.css").write_bytes(css)
-              with Path("_site/app.js").open("ab") as handle:
-                  handle.write(b"\n")
-                  handle.write(js)
-              Path("_site/.nojekyll").touch()
-          except Exception as exc:
-              Path("/tmp/business14-error.txt").write_text(f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}", encoding="utf-8")
-              raise
+          js = decode_patch([
+              "business14.js.gz.b64x.part00",
+              "business14.js.gz.b64x.part01",
+              "business14.js.gz.b64x.part02",
+          ])
+          css = decode_patch(["business14.css.gz.b64x.fixed"])
+
+          Path("_site/business14.css").write_bytes(css)
+          with Path("_site/app.js").open("ab") as handle:
+              handle.write(b"\n")
+              handle.write(js)
+          Path("_site/.nojekyll").touch()
           PY
 
-      - name: Validate release
+      - name: Validate Business Control 1.4
         shell: bash
         run: |
           set -euo pipefail
@@ -120,21 +108,14 @@ jobs:
           RESULT: ${{ job.status }}
         shell: bash
         run: |
-          set -euo pipefail
           python3 - <<'PY' > /tmp/build-marker.b64
           import base64, json, os
-          from pathlib import Path
-          diagnostics = {}
-          if Path('/tmp/business14-diagnostics.json').exists():
-              diagnostics = json.loads(Path('/tmp/business14-diagnostics.json').read_text())
           payload = {
               "stage": "build",
               "release": "Business Control 1.4",
               "result": os.environ["RESULT"],
               "run_id": os.environ["RUN_ID"],
               "commit_sha": os.environ["COMMIT_SHA"],
-              "error": Path('/tmp/business14-error.txt').read_text() if Path('/tmp/business14-error.txt').exists() else "",
-              "diagnostics": diagnostics,
           }
           print(base64.b64encode((json.dumps(payload, indent=2) + "\n").encode()).decode())
           PY
@@ -168,7 +149,6 @@ jobs:
           RESULT: ${{ job.status }}
         shell: bash
         run: |
-          set -euo pipefail
           python3 - <<'PY' > /tmp/deploy-marker.b64
           import base64, json, os
           payload = {
